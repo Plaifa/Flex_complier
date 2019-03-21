@@ -1,30 +1,32 @@
 
+
 D			[0-9]
 L			[a-zA-Z_]
 H			[a-fA-F0-9]
 E			[Ee][+-]?{D}+
 FS			(f|F|l|L)
 IS			(u|U|l|L)*
-%option noyywrap
 
+%option noyywrap
 %{
 #include <stdio.h>
 
-enum {IDENTIFIER=300, CONSTANT, STRING_LITERAL, SIZEOF};
-enum {PTR_OP=400, INC_OP, DEC_OP, LEFT_OP, RIGHT_OP, LE_OP, GE_OP, EQ_OP, NE_OP};
-enum {AND_OP=500, OR_OP, MUL_ASSIGN, DIV_ASSIGN, MOD_ASSIGN, ADD_ASSIGN};
-enum {SUB_ASSIGN=600, LEFT_ASSIGN, RIGHT_ASSIGN, AND_ASSIGN, XOR_ASSIGN, OR_ASSIGN,TYPE_NAME};
-enum {TYPEDEF=700, EXTERN, STATIC, AUTO, REGISTER};
-enum {CHAR=800, SHORT, INT, LONG, SIGNED, UNSIGNED, FLOAT, DOUBLE, CONST, VOLATILE, VOID,STRUCT, UNION, ENUM, ELLIPSIS};
-enum {CASE=900, DEFAULT, IF, ELSE, SWITCH, WHILE, DO, FOR, GOTO, CONTINUE, BREAK, RETURN};
+	enum {IDENTIFIER=300, CONSTANT, STRING_LITERAL, SIZEOF};
+	enum {PTR_OP=400, INC_OP, DEC_OP, LEFT_OP, RIGHT_OP, LE_OP, GE_OP, EQ_OP, NE_OP};
+	enum {AND_OP=500, OR_OP, MUL_ASSIGN, DIV_ASSIGN, MOD_ASSIGN, ADD_ASSIGN};
+	enum {SUB_ASSIGN=600, LEFT_ASSIGN, RIGHT_ASSIGN, AND_ASSIGN, XOR_ASSIGN, OR_ASSIGN,TYPE_NAME};
+	enum {TYPEDEF=700, EXTERN, STATIC, AUTO, REGISTER};
+	enum {CHAR=800, SHORT, INT, LONG, SIGNED, UNSIGNED, FLOAT, DOUBLE, CONST, VOLATILE, VOID,STRUCT, UNION, ENUM, ELLIPSIS};
+	enum {CASE=900, DEFAULT, IF, ELSE, SWITCH, WHILE, DO, FOR, GOTO, CONTINUE, BREAK, RETURN};
 
 
-void count();
-void comment(void);
+	void comment(void);
 %}
 
 %%
 "/*"			{ comment(); }
+#(.*)			{  }
+"//"[^\n]*		{  }
 
 "auto"			{ count(); return(AUTO); }
 "break"			{ count(); return(BREAK); }
@@ -64,7 +66,7 @@ void comment(void);
 0[xX]{H}+{IS}?		{ count(); return(CONSTANT); }
 0{D}+{IS}?		{ count(); return(CONSTANT); }
 {D}+{IS}?		{ count(); return(CONSTANT); }
-L?'(\\.|[^\\'])+'	{ count(); return(CONSTANT); }
+
 
 {D}+{E}{FS}?		{ count(); return(CONSTANT); }
 {D}*"."{D}+({E})?{FS}?	{ count(); return(CONSTANT); }
@@ -119,38 +121,25 @@ L?\"(\\.|[^\\"])*\"	{ count(); return(STRING_LITERAL); }
 "|"			{ count(); return('|'); }
 "?"			{ count(); return('?'); }
 
-[ \t\v\n\f]		{ count(); }
-.			{ /* ignore bad characters */ }
+[ \t\v\n\f]		{ /*ignore whitespace*/ }
+.				{ /* ignore bad characters */ }
 
 %%
 
 
-
-void comment()
-{
+void comment(void){
 	char c, c1;
 
-loop:
-	while ((c = input()) != '*' && c != 0)
-		putchar(c);
-
-	if ((c1 = input()) != '/' && c != 0)
+	while ((c= input()) != '0')
 	{
-		unput(c1);
-		goto loop;
+		if(c=='/' && c1 =='*')
+			return;
+		c1=c;
 	}
-
-	if (c != 0)
-		putchar(c1);
 }
-
-
 int column = 0;
-
-void count()
-{
+void count(){
 	int i;
-
 	for (i = 0; yytext[i] != '\0'; i++)
 		if (yytext[i] == '\n')
 			column = 0;
@@ -158,28 +147,26 @@ void count()
 			column += 8 - (column % 8);
 		else
 			column++;
-
-	ECHO;
-}
-main()
-{
-	return (1);
 }
 
 int check_type()
 {
-/*
-* pseudo code --- this is what it should check
-*
-*	if (yytext == type_name)
-*		return(TYPE_NAME);
-*
-*	return(IDENTIFIER);
-*/
-
-/*
-*	it actually will only return IDENTIFIER
-*/
-
 	return(IDENTIFIER);
+}
+
+int main(int argc,char **argv)
+{
+	yyin = fopen(argv[1],"r");
+	int token;
+	while ((token = yylex()))
+	{
+		printf("[%d",token);
+		if (token == 300 || token == 301)
+		{
+			printf(",%s",yytext);
+		}
+		printf("]\n");
+	}
+	fclose(yyin);
+	return 0;
 }
